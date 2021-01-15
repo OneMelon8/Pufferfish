@@ -7,10 +7,10 @@ title:  Team
 
 
 ## USER 1
-***UCI Net ID***: ucinetid1
+***Neo Chen***: neoxc
 
 ## USER 2
-***UCI Net ID***: ucinetid2
+***Tianshu Wang***: tiansw1
 
 ## USER 3
-***UCI Net ID***: ucinetid3
+***Eric Ng***: eng3
