@@ -4,7 +4,7 @@ title:  Proposal
 ---
 
 ## Abstract
-We decided to create an agent that specializes in player-verses-player combat using different weapons. We will train two agents that will fight each other on randomly-generated maps. We plan to have several actions, including attack, shield, jump, move_to(position), look_at(position), switch_hotbar(index), use_item, etc.
+We decided to create an agent that specializes in player-versus-player combat using different weapons. We will train two agents that will fight each other on randomly-generated maps. The agent will take in observation from the world consisting of enemy position, current health, and current position, hotbar index. We plan to have several actions, including attack, shield, jump, move_to(position), look_at(position), switch_hotbar(index), use_item, etc.
 
 
 ## AI/ML Algorithms
