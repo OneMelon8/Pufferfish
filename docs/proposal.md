@@ -16,3 +16,7 @@ Firstly we will create a hard-coded agent with fixed actions, the AI shall play 
 
 The qualitative evaluation will be the agent’s response to different incoming actions: such as shielding or avoiding when being attacked. It is hard to judge the quality of combat, but we will try to make the AI react differently to attacks so the fight can be more exciting.
 
+
+## Meeting Time (Per Week)
+Every Friday 18:00 Irvine time
+Schedule extra if needed
