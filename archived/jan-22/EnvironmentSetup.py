@@ -1,14 +1,16 @@
 # Imports
-import os
-import sys
-import uuid
+import math
+import json
 import time
+import uuid
 import functools
+from past.utils import old_div
+from collections import namedtuple
 
 import MalmoPython as Malmo
 
 # Global configurations
-TIME_OUT_MS = 15_000
+TIME_OUT_MS = 60_000
 
 # File path to the arena map folder
 # Add your path into one of these, commenting/uncommenting might be easier
@@ -16,10 +18,16 @@ ABSOLUTE_PATH_TO_MAP = "C:/One/UCI/Classes/CS175/Arena"  # neo
 # ABSOLUTE_PATH_TO_MAP = "" # eric
 # ABSOLUTE_PATH_TO_MAP = "" # tianshu
 
+# Mission configurations
+MISSION_COUNT = 5
+
+EntityInfo = namedtuple('EntityInfo', 'x, y, z, name')
+
 # Agent configurations
 AGENT_COUNT = 2
 AGENT_NAMES = ["Puffer", "Fish"]
-AGENT_SPAWNS = ["<Placement x=\"0.5\" y=\"64\" z=\"-26.5\" yaw=\"0\"/>", "<Placement x=\"0.5\" y=\"64\" z=\"27.5\" yaw=\"180\"/>"]
+# AGENT_SPAWNS = ["<Placement x=\"0.5\" y=\"64\" z=\"-26.5\" yaw=\"0\"/>", "<Placement x=\"0.5\" y=\"64\" z=\"27.5\" yaw=\"180\"/>"]
+AGENT_SPAWNS = ["<Placement x=\"0.5\" y=\"64\" z=\"-26.5\" yaw=\"0\"/>", "<Placement x=\"6.5\" y=\"65\" z=\"-5.5\" yaw=\"180\"/>"]
 AGENT_EQUIPMENTS = [(3, 1), (3, 1)]  # (weapon, armor)
 
 
@@ -57,8 +65,14 @@ def get_mission_xml():
                 {create_inventory(*AGENT_EQUIPMENTS[a])}
             </AgentStart>
             <AgentHandlers>
+                <ContinuousMovementCommands turnSpeedDegs="360"/>
+                <ChatCommands/>
+                <MissionQuitCommands/>
+                <ObservationFromNearbyEntities>
+                    <Range name="entities" xrange="60" yrange="5" zrange="60"/>
+                </ObservationFromNearbyEntities>
+                <ObservationFromRay/>
                 <ObservationFromFullStats/>
-                <ContinuousMovementCommands/>
             </AgentHandlers>
         </AgentSection>
         """
@@ -107,7 +121,7 @@ def start_mission(agent_host, mission, client_pool, mission_record, index, missi
         except Malmo.MissionException as ex:
             error_code = ex.details.errorCode
             if error_code == Malmo.MissionErrorCode.MISSION_SERVER_WARMING_UP:
-                print("Server not quite ready yet - waiting...")
+                print(f"Server not quite ready yet - waiting; wait time = {wait_time}")
                 time.sleep(2)
             elif error_code == Malmo.MissionErrorCode.MISSION_INSUFFICIENT_CLIENTS_AVAILABLE:
                 print("Not enough available Minecraft instances running.")
@@ -144,6 +158,48 @@ def wait_for_start(agent_hosts):
     print(f"All agents ready, mission start!")
 
 
+##
+def calcTurnValue(us, them, current_yaw):
+    """ Calc turn speed required to steer "us" towards "them" """
+    dx = them[0] - us[0]
+    dz = them[1] - us[1]
+    yaw = -180 * math.atan2(dx, dz) / math.pi
+    difference = yaw - current_yaw
+    while difference < -180:
+        difference += 360
+    while difference > 180:
+        difference -= 360
+    difference /= 180.0
+    return difference
+
+
+def getVelocity(my_name, entities, current_yaw, current_pos):
+    """ Calculate a good velocity to head in, according to the entities around us """
+    if my_name == "Puffer" or any(_ is None for _ in [my_name, entities, current_yaw, current_pos]):
+        return 0, 0
+
+    # Get all the points of interest (every entity apart from the robots)
+    # poi = [ent for ent in entities if not ent.name.startswith("Robot")]
+    enemy = None
+    for ent in entities:
+        if my_name == "Fish" and ent.name == "Puffer":
+            enemy = ent
+            break
+    if enemy is None:
+        return 0, 0
+    print(enemy)
+
+    # Turn value to head towards it:
+    turn = calcTurnValue(current_pos, (enemy.x, enemy.z), current_yaw)
+    # Calculate a speed to use - helps to avoid orbiting:
+    dx = enemy.x - current_pos[0]
+    dz = enemy.z - current_pos[1]
+    speed = 1.0 - (old_div(1.0, (1.0 + abs(old_div(dx, 3.0)) + abs(old_div(dz, 3.0)))))
+    if abs(dx) + abs(dz) < 1.5:
+        speed = 0
+    return turn, speed * 2
+
+
 if __name__ == "__main__":
     # Flush immediately
     print = functools.partial(print, flush=True)
@@ -156,22 +212,47 @@ if __name__ == "__main__":
     for a in range(AGENT_COUNT):
         client_pool.add(Malmo.ClientInfo("127.0.0.1", 10000 + a))
 
-    # Create missions
-    mission = Malmo.MissionSpec(get_mission_xml(), True)
-    mission_id = str(uuid.uuid4())
+    for a in range(MISSION_COUNT):
+        print(f"Running mission #{a}...")
+        # Create missions
+        mission = Malmo.MissionSpec(get_mission_xml(), True)
+        mission_id = str(uuid.uuid4())
 
-    # Start mission
-    for a in range(AGENT_COUNT):
-        start_mission(agent_hosts[a], mission, client_pool, Malmo.MissionRecordSpec(), a, mission_id)
+        # Start mission
+        for a in range(AGENT_COUNT):
+            start_mission(agent_hosts[a], mission, client_pool, Malmo.MissionRecordSpec(), a, mission_id)
 
-    wait_for_start(agent_hosts)
+        wait_for_start(agent_hosts)
 
-    hasEnded = False
-    while not hasEnded:
-        hasEnded = True  # assume all good
-        print(".", end="")
-        time.sleep(0.1)
-        for ah in agent_hosts:
-            world_state = ah.getWorldState()
-            if world_state.is_mission_running:
-                hasEnded = False  # all not good
+        hasEnded = False
+        while not hasEnded:
+            hasEnded = True
+            # In mission
+            for b in range(AGENT_COUNT):
+                if AGENT_NAMES[b] == "Puffer":
+                    continue
+                agent_host = agent_hosts[b]
+                world_state = agent_host.getWorldState()
+                
+                if world_state.is_mission_running:
+                    hasEnded = False  # all not good
+                if world_state.is_mission_running and world_state.number_of_observations_since_last_state > 0:
+                    msg = world_state.observations[-1].text
+                    ob = json.loads(msg)
+
+                    if "Yaw" in ob:
+                        yaw = ob[u'Yaw']
+                    if "XPos" in ob and "ZPos" in ob:
+                        position = (ob[u'XPos'], ob[u'ZPos'])
+                    if "entities" in ob:
+                        entities = [EntityInfo(k["x"], k["y"], k["z"], k["name"]) for k in ob["entities"]]
+                        turn, speed = getVelocity(AGENT_NAMES[b], entities, yaw, position)
+                        agent_host.sendCommand("move " + str(speed))
+                        agent_host.sendCommand("turn " + str(turn))
+                    if u'LineOfSight' in ob:
+                        los = ob[u'LineOfSight']
+                        if los[u'hitType'] == "entity" and los[u'inRange'] and los[u'type'] == "Puffer":
+                            agent_host.sendCommand("attack 1")
+                            agent_host.sendCommand("attack 0")
+
+            time.sleep(0.1)
