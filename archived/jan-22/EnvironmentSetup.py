@@ -10,6 +10,12 @@ import MalmoPython as Malmo
 # Global configurations
 TIME_OUT_MS = 15_000
 
+# File path to the arena map folder
+# Add your path into one of these, commenting/uncommenting might be easier
+ABSOLUTE_PATH_TO_MAP = "C:/One/UCI/Classes/CS175/Arena"  # neo
+# ABSOLUTE_PATH_TO_MAP = "" # eric
+# ABSOLUTE_PATH_TO_MAP = "" # tianshu
+
 # Agent configurations
 AGENT_COUNT = 2
 AGENT_NAMES = ["Puffer", "Fish"]
@@ -25,7 +31,7 @@ def get_mission_xml():
         xmlns="http://ProjectMalmo.microsoft.com"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
         <About>
-            <Summary>Defaut Mission</Summary>
+            <Summary>Pufferfish</Summary>
         </About>
         <ServerSection>
             <ServerInitialConditions>
@@ -35,7 +41,7 @@ def get_mission_xml():
                 </Time>
             </ServerInitialConditions>
             <ServerHandlers>
-                <FileWorldGenerator src="C:/One/UCI/Classes/CS175/Arena"/>
+                <FileWorldGenerator src="{ABSOLUTE_PATH_TO_MAP}"/>
                 <ServerQuitFromTimeUp timeLimitMs="{TIME_OUT_MS}"/>
                 <ServerQuitWhenAnyAgentFinishes/>
             </ServerHandlers>
