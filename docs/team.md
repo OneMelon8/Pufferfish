@@ -6,11 +6,11 @@ title:  Team
 # {{ page.title }}
 
 
-## USER 1
-***Neo Chen***: neoxc
+### Neo Chen (neoxc)
+![](one.png)
 
-## USER 2
-***Tianshu Wang***: tiansw1
+### Tianshu Wang (tiansw1)
+![](tianshu.png)
 
-## USER 3
-***Eric Ng***: eng3
+### Eric Ng (eng3)
+![](eric.png)
