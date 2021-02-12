@@ -3,7 +3,7 @@ layout: default
 title:  Status
 ---
 
-[![](http://img.youtube.com/vi/LOFqFn7dzGI/0.jpg)](http://www.youtube.com/watch?v=LOFqFn7dzGI "")
+[![](http://img.youtube.com/vi/LOFqFn7dzGI/0.jpg)](http://www.youtube.com/watch?v=LOFqFn7dzGI)
 
 ## Project Summary
 Our goal for the project is to use reinforcement learning in order to create an agent that will learn optimal strategies for player-versus-player combat. Currently the RL agent is trained against a hard-coded policy agent that has what we believe to be good combat senses. After training the agent overnight, our RL agent has learned to defeat this hard-coded agent and our next steps are to implement a self-play environment in order to further train our RL agent to potentially be able to beat a human player.
@@ -13,10 +13,10 @@ Our goal for the project is to use reinforcement learning in order to create an 
 ![image.png](attachment:image.png)<br>
 
 We are currently using the preimplemented version of the Proximal Policy Optimization algorithm trainer from RLLIB to train our agent. Which uses the update <br>
-$L^{CLIP}(\theta)=E[min(r(\theta)A_t, clip(r_t(\theta),1-\epsilon,1+\epsilon)A_t)] $<br>
-Where $r(\theta) = \frac{\pi_{\theta}(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}$ the ratio of the current policy over the old policy<br>
-$A_t = A(s,a) = Q(s,a) - V(s)$ is the advantage function which is the Q-value subtracted by the Value at a given state.<br>
-The clip function will keep the ratio $r(\theta)$ between $[1-\epsilon,1+\epsilon]$
+$$L^{CLIP}(\theta)=E[min(r(\theta)A_t, clip(r_t(\theta),1-\epsilon,1+\epsilon)A_t)] $$<br>
+Where $$r(\theta) = \frac{\pi_{\theta}(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}$$ the ratio of the current policy over the old policy<br>
+$$A_t = A(s,a) = Q(s,a) - V(s)$$ is the advantage function which is the Q-value subtracted by the Value at a given state.<br>
+The clip function will keep the ratio $$r(\theta)$$ between $$[1-\epsilon,1+\epsilon]$$
 
 The environment creates two agents that are across the map from each other with a time limit of 120 seconds and through the use of a path finding algorithm they will always find and look towards each other. The path finding is implemented for both the hardcoded and reinforcement-learning agent as we will mainly be focusing on how the agent will use particular items. <br>
 <br>
@@ -42,12 +42,14 @@ For the training process we saved different models throughout intervals. We want
 Firstly we will create a hard-coded agent with fixed actions, the AI shall play against it until it is developed enough. Then the AI will fight against itself (another agent) continuously to improve the quality. The quantitative evaluation metric of this project will be how often the hard-coded agent is defeated. The baseline should be beating the agent for 50% of matches, which means that the AI has at least the “smartness” of a hard coded agent. We expect it to be improved as it should be able to defeat the agent for over 75% of the plays.<br>
 <b>Here is the returns of an agent that only began training, with the score: 
     <br>Current Episode 231	 RL_AGENT_WINS:43	 RL AGENT_LOSSES:185</b>
+    
 <img src= "files/returns.png"/>
 
 The above image shows signs that the agent is learning, however it is still being defeated and losing a majority of the time.<br>
 
 <b>Here is the returns of an agent that trained overnight for over 1000 matches, with the score: 
     <br>Current Episode 217	 RL_AGENT_WINS:153	 RL AGENT_LOSSES:61</b>
+    
 <img src= "files/returns_trained.png"/>
 
 **The score does not add up to the number of episodes due to some episodes timing out (neither agents were able to kill one another before the timer ran out)<br>
@@ -65,8 +67,6 @@ The AI just needed several hundreds of battles to reach a winning rate of 70%, w
 
 ## Resources Used
 The core of our project is reinforcement learning, we used RLlib to implement it. Assignment 2 of this class provided crucial information to set up the reinforcement learning framework.<br>
-multi-agent RLLIB: https://docs.ray.io/en/master/rllib-env.html#multi-agent-and-hierarchical <br>
-multi-agent RLLIB source code: https://github.com/ray-project/ray/blob/master/rllib/env/multi_agent_env.py <br>
-Project Malmo: https://microsoft.github.io/malmo/0.30.0/Schemas/Mission.html <br>
-PPO: https://towardsdatascience.com/proximal-policy-optimization-ppo-with-sonic-the-hedgehog-2-and-3-c9c21dbed5e
-
+multi-agent RLLIB: [!](https://docs.ray.io/en/master/rllib-env.html#multi-agent-and-hierarchical) <br>
+multi-agent RLLIB source code: [!](https://github.com/ray-project/ray/blob/master/rllib/env/multi_agent_env.py)<br>
+Project Malmo: [!](https://microsoft.github.io/malmo/0.30.0/Schemas/Mission.html) <br>
