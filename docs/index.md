@@ -12,11 +12,11 @@ Our goal in this project is to create a reinforcement learning agent that can de
 ![](intro.PNG)
 
 
-**Here is a clip of Agent Puffer before training:**
+**Here is a clip from the perspective of Agent Puffer (RL Agent) before training:**
 <iframe width="560" height="315" src="https://www.youtube.com/embed/44KwAyw-AXs" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 
-**Here is a clip of Agent Puffer after training overnight:**
+**Here is a clip from the perspective of Agent Puffer (RL Agent) after training overnight:**
 <iframe width="560" height="315" src="https://www.youtube.com/embed/uB0HolxmnzU" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 

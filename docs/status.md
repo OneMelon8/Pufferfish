@@ -39,8 +39,25 @@ The agent named "Fish" is a policy-based agent using many policies derived from 
 - When enemy is wielding sword, heal when HP < 7.5
 - Otherwise, heal when HP < 4
 
-The agent named "Puffer" will be the reinforcement learning agent, and we decided to discretize the action space. The action space is composed of 6 different actions which include: Attack, Switch Sword, Switch Axe, Golden Apple, Sheild, and IDLE. The observation that we provided to the agent was whether it was in range of the enemy, current health (normalized), enemy health (normalized), and enemy weapon type. We decided to use a continuous observation space between 0 and 1, thus the enemy in range observation will be 0 if the enemy is not in range and 1 otherwise. The health observations will be normalized by dividing by a factor of 20, and the enemy weapon type will be mapped as axe=1, sword=0.75, gapple=0.25, shield=0 (offensive to defensive scale). For rewards we decided to give the agent a reward based off of the change in health at each time step (delta_health - delta_enemy_health) along with a large positive reward (+20) if the RL agent was able to kill the other agent.
+The agent named "Puffer" will be the reinforcement learning agent, and we decided to discretize the action space. While the observation space is continuous between 0 and 1.Thus the enemy in range observation will be 0 if the enemy is not in range and 1 otherwise. The health observations will be normalized by dividing by a factor of 20, and the enemy weapon type will be mapped as axe=1, sword=0.75, gapple=0.25, shield=0 (offensive to defensive scale)
 
+**Action Space:**
+- Attack
+- Switch sword
+- Switch axe
+- Use golden apple
+- Use sheild
+- IDLE
+
+**Observation Space:**
+- In range of the enemy
+- current health (normalized)
+- enemy health (normalized)
+- enemy weapon type
+
+**Reward Space:**
+- change in health at each time step (delta_health - delta_enemy_health)
+- large positive reward (+20) if the RL agent was able to kill the other agent
 
 For the training process we saved different models throughout intervals. We wanted the agent to be able to learn to hit and not die immediately to the hard coded agent, so we began training the RL agent with diamond armor against the hard coded agent who had leather armor. After running it over night the agent we loaded the agent but this time switched both the agent's armor to gold in order to have an even match. We once again trained it for a few hours and that is where we are currently at.
             
