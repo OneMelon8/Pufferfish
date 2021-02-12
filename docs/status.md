@@ -10,7 +10,7 @@ Our goal for the project is to use reinforcement learning in order to create an 
 
 
 ## Approach
-![image.png](attachment:image.png)<br>
+![](setup.png)<br>
 
 We are currently using the preimplemented version of the Proximal Policy Optimization algorithm trainer from RLLIB to train our agent. Which uses the update <br>
 $$L^{CLIP}(\theta)=E[min(r(\theta)A_t, clip(r_t(\theta),1-\epsilon,1+\epsilon)A_t)] $$<br>
@@ -43,14 +43,14 @@ Firstly we will create a hard-coded agent with fixed actions, the AI shall play 
 <b>Here is the returns of an agent that only began training, with the score: 
     <br>Current Episode 231	 RL_AGENT_WINS:43	 RL AGENT_LOSSES:185</b>
     
-<img src= "files/returns.png"/>
+![](returns.png)
 
 The above image shows signs that the agent is learning, however it is still being defeated and losing a majority of the time.<br>
 
 <b>Here is the returns of an agent that trained overnight for over 1000 matches, with the score: 
     <br>Current Episode 217	 RL_AGENT_WINS:153	 RL AGENT_LOSSES:61</b>
     
-<img src= "files/returns_trained.png"/>
+![](returns_trained.png)
 
 **The score does not add up to the number of episodes due to some episodes timing out (neither agents were able to kill one another before the timer ran out)<br>
 The two images above show the rewards that the agent gained per episode, and by looking at the second graph the RL agent is receiving a lot more positive rewards due to the fact that he is killing the agent and receiving a +20 reward. Comparing both the plots you can see that the first graph shows a lot of downward pits, while the second graph has a lot of upwards peaks. This demonstrates that the RL agent was able to begin to learn how to defeat the hard coded agent. The first graph also shows some potential learning by looking at how the average negative rewards are slowly increasing.
@@ -67,6 +67,6 @@ The AI just needed several hundreds of battles to reach a winning rate of 70%, w
 
 ## Resources Used
 The core of our project is reinforcement learning, we used RLlib to implement it. Assignment 2 of this class provided crucial information to set up the reinforcement learning framework.<br>
-multi-agent RLLIB: [!](https://docs.ray.io/en/master/rllib-env.html#multi-agent-and-hierarchical) <br>
-multi-agent RLLIB source code: [!](https://github.com/ray-project/ray/blob/master/rllib/env/multi_agent_env.py)<br>
-Project Malmo: [!](https://microsoft.github.io/malmo/0.30.0/Schemas/Mission.html) <br>
+multi-agent RLLIB: <https://docs.ray.io/en/master/rllib-env.html#multi-agent-and-hierarchical> <br>
+multi-agent RLLIB source code: <https://github.com/ray-project/ray/blob/master/rllib/env/multi_agent_env.py><br>
+Project Malmo: <https://microsoft.github.io/malmo/0.30.0/Schemas/Mission.html> <br>
