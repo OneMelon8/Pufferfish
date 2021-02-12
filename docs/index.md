@@ -9,7 +9,7 @@ Our goal in this project is to create a Reinforcement learning agent that can de
 
 **Below is our reinforcement learning agent (Agent Puffer) who will be trained to fight against Agent Fish**
 
-![AgentPuffer](intro.png)
+![AgentPuffer](intro.PNG)
 
 **Here is a clip of Agent Puffer before training**
 
