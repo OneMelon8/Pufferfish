@@ -3,46 +3,53 @@ layout: default
 title:  Status
 ---
 
-[![](http://img.youtube.com/vi/LOFqFn7dzGI/0.jpg)](http://www.youtube.com/watch?v=LOFqFn7dzGI)
+## Demonstration Video
+<iframe width="560" height="315" src="https://www.youtube.com/embed/LOFqFn7dzGI" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
 
 ## Project Summary
 Our goal for the project is to use reinforcement learning in order to create an agent that will learn optimal strategies for player-versus-player combat. Currently the RL agent is trained against a hard-coded policy agent that has what we believe to be good combat senses. After training the agent overnight, our RL agent has learned to defeat this hard-coded agent and our next steps are to implement a self-play environment in order to further train our RL agent to potentially be able to beat a human player.
 
 
 ## Approach
-![](setup.png)<br>
+![](setup.png)
 
-We are currently using the preimplemented version of the Proximal Policy Optimization algorithm trainer from RLLIB to train our agent. Which uses the update <br>
-$$L^{CLIP}(\theta)=E[min(r(\theta)A_t, clip(r_t(\theta),1-\epsilon,1+\epsilon)A_t)] $$<br>
+We are currently using the preimplemented version of the Proximal Policy Optimization algorithm trainer from RLLIB to train our agent. Which uses the update<br>
+$$L^{CLIP}(\theta)=E[min(r(\theta)A_t, clip(r_t(\theta),1-\epsilon,1+\epsilon)A_t)] $$
 Where $$r(\theta) = \frac{\pi_{\theta}(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}$$ the ratio of the current policy over the old policy<br>
-$$A_t = A(s,a) = Q(s,a) - V(s)$$ is the advantage function which is the Q-value subtracted by the Value at a given state.<br>
+$$A_t = A(s,a) = Q(s,a) - V(s)$$ is the advantage function which is the Q-value subtracted by the Value at a given state.
 The clip function will keep the ratio $$r(\theta)$$ between $$[1-\epsilon,1+\epsilon]$$
 
-The environment creates two agents that are across the map from each other with a time limit of 120 seconds and through the use of a path finding algorithm they will always find and look towards each other. The path finding is implemented for both the hardcoded and reinforcement-learning agent as we will mainly be focusing on how the agent will use particular items. <br>
-<br>
-The agent named Fish is hardcoded and given a policy to follow. This policy includes: When it is low health use golden apples, if it sees the enemy agent hit them based off of the weapon's cooldown for maximum damage, use a sheild when the enemy agent is close. <br>
-Weapon policy:<br>
-    # - In general, use sword when enemy is using axe or fists<br>
-    # - When enemy is shielding, switch to axe and break shield<br>
-    # - When enemy is using sword, use sword/shield combo<br>
-    # - When low HP or enemy low HP, switch to axe for more damage<br>
-Shield policy:<br>
-    # - In general, don't hold shield against axe, can hold against other weapons<br>
-    # - When low HP, hold shield at all cost, bait attack, counter attack or run<br>
-Heal policy:<br>
-    # - When enemy is wielding axe, heal when HP < 10<br>
-    # - When enemy is wielding sword, heal when HP < 7.5<br>
-<br>
-The agent named Puffer will be the reinforcement learning agent, and we decided to discretize the action space. The action space is composed of 6 different actions which include: Attack, Switch Sword, Switch Axe, Golden Apple, Sheild, and IDLE. The observation that we provided to the agent was whether it was in range of the enemy, current health, enemy health, and enemy weapon. We decided to use a continuous observation space between 0 and 1, thus the enemy in range observation will be 0 if the enemy is not in range and 1 otherwise. The health observations will be normalized by dividing by a factor of 20 and the enemy weapon will be mapped as axe=1, sword=0.75, gapple=0.25, shield=0 (offensive to defensive scale). For rewards we decided to give the agent a reward based off of the change in health at each time step(delta_health - delta_enemy_health) along with a large positive reward (+20) if the RL agent was able to kill the hard coded agent.<br>
-<br>
+The environment creates two agents that are across the map from each other with a time limit of 120 seconds and through the use of a path finding algorithm they will always find and look towards each other. The path finding is implemented for both the hardcoded and reinforcement-learning agent as we will mainly be focusing on how the agent will use particular weapons and items.
+
+The agent named "Fish" is a policy-based agent using many policies derived from actual PvP strategies. For example, when it is low health use golden apples, if it sees the enemy agent hit them based off of the weapon's cooldown for maximum damage, use a sheild when the enemy agent is close. Here are some more detailed policies:
+
+**Weapon policy:**
+- In general, use sword when enemy is using axe or fists, try to interrupt axe attacks
+- When enemy is shielding, switch to axe and break shield
+- When enemy is using sword, use sword/shield combo
+- When low HP or enemy low HP, switch to axe for more damage
+
+**Shield policy:**
+- In general, don't hold shield against axe, can hold against other weapons
+- When low HP, hold shield at all cost, after baiting attack, counter attack or run
+
+**Golden apple policy:**
+- When enemy is wielding axe, heal when HP < 10
+- When enemy is wielding sword, heal when HP < 7.5
+- Otherwise, heal when HP < 4
+
+The agent named "Puffer" will be the reinforcement learning agent, and we decided to discretize the action space. The action space is composed of 6 different actions which include: Attack, Switch Sword, Switch Axe, Golden Apple, Sheild, and IDLE. The observation that we provided to the agent was whether it was in range of the enemy, current health (normalized), enemy health (normalized), and enemy weapon type. We decided to use a continuous observation space between 0 and 1, thus the enemy in range observation will be 0 if the enemy is not in range and 1 otherwise. The health observations will be normalized by dividing by a factor of 20, and the enemy weapon type will be mapped as axe=1, sword=0.75, gapple=0.25, shield=0 (offensive to defensive scale). For rewards we decided to give the agent a reward based off of the change in health at each time step (delta_health - delta_enemy_health) along with a large positive reward (+20) if the RL agent was able to kill the other agent.
+
+
 For the training process we saved different models throughout intervals. We wanted the agent to be able to learn to hit and not die immediately to the hard coded agent, so we began training the RL agent with diamond armor against the hard coded agent who had leather armor. After running it over night the agent we loaded the agent but this time switched both the agent's armor to gold in order to have an even match. We once again trained it for a few hours and that is where we are currently at.
             
  
 ## Evaluation
-Firstly we will create a hard-coded agent with fixed actions, the AI shall play against it until it is developed enough. Then the AI will fight against itself (another agent) continuously to improve the quality. The quantitative evaluation metric of this project will be how often the hard-coded agent is defeated. The baseline should be beating the agent for 50% of matches, which means that the AI has at least the “smartness” of a hard coded agent. We expect it to be improved as it should be able to defeat the agent for over 75% of the plays.<br>
+First we will create a hard-coded agent with fixed actions, the AI shall play against it until it is developed enough. Then the AI will fight against its previous self (another agent) continuously to improve the quality. The quantitative evaluation metric of this project will be how often the hard-coded agent is defeated. The baseline should be beating the agent for 50% of matches, which means that the AI has at least the “smartness” of a hard coded agent. We expect it to be improved as it should be able to defeat the agent for over 75% of the plays.<br>
 <b>Here is the returns of an agent that only began training, with the score: 
     <br>Current Episode 231	 RL_AGENT_WINS:43	 RL AGENT_LOSSES:185</b>
-    
+
 ![](returns.png)
 
 The above image shows signs that the agent is learning, however it is still being defeated and losing a majority of the time.<br>
@@ -61,7 +68,7 @@ From observing the video at the top of the page we can see that the agent, in th
 
 
 ## Remaining Goals and Challenges
-Now we have developed an agent to fight with hardcoded agents. Currently the training is still processing and the winning rate is 70%. After the winning rate toward the hardcoded agent reaches 90%, the AI will be adjusted to fight with itself and continue to improve its ability through self-play. 
+Now we have developed an agent to fight with hardcoded agents. Currently the training is still processing and the winning rate is 70%. After the winning rate toward the hardcoded agent reaches 85%, the AI will be adjusted to fight with itself and continue to improve its ability through self-play. 
 The AI just needed several hundreds of battles to reach a winning rate of 70%, which is comparatively easy. During the future self-playing process, the smart agent will still need to fight with the hardcoded one to guarantee the battles between AIs to improve its ability. So the biggest challenge will be improving the hardcoded agent to make it competitive again. Besides, such improvement will extend the training process and thus we can verify the effectiveness of our reinforcement learning framework. We expect the RL agent to perform better than it's current iteration through self-play but at the moment we are unsure whether it will actually improve or become worse. If the agent does end up performing worse we will try to use multiple variations of combat for the hand-coded policy agents which will hopefully bring it to the point where it is able to defeat a human player. 
 
 
