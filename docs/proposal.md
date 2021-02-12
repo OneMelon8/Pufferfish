@@ -4,11 +4,11 @@ title:  Proposal
 ---
 
 ## Abstract
-We decided to create an agent that specializes in player-versus-player combat using different weapons. We will train two agents that will fight each other on randomly-generated maps. The agent will take in observation from the world consisting of enemy position, current health, and current position, hotbar index. We plan to have several actions, including attack, shield, jump, move_to(position), look_at(position), switch_hotbar(index), use_item, etc.
+We decided to create a reinforcement learning agent that specializes in player-versus-player combat using different weapons. The agent will perform different action choices such as hitting with an axe, sword, blocking with a sheild and eatting a golden apple. We will first train the RL agent against a hand-coded policy based agent that will choose actions based on what we think are good decisions, such as eatting a golden apple at low hp, removing a player's sheild by hitting with an axe, and etc. After training against a hand-coded agent and performing well against it, we will make the RL agent learn to pvp based on self-play. The goal is through self-play the RL agent will become good enough at PVP to defeat a human player. 
 
 
 ## AI/ML Algorithms
-We plan to test two different reinforcement learning agents, one trained using a DQN model and the other trained using the Actor critic model.
+We plan to use a prebuilt PPO reinforcement algorithm from RLLIB in order to train the agent to defeat the hand-coded agent. After defeating the hand-coded agent we plan to use self-play in order to further train the RL agent to learn. If the RL agent ends up performing worse from self play we plan to add additional policies to our general AI hand-coded agent.
 
 
 ## Evaluation Plan
