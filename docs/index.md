@@ -16,10 +16,10 @@ Our goal in this project is to create a Reinforcement learning agent that can de
 <p style="clear:both;"/>
 <b>Here is a clip of Agent Puffer before training</b>
 
-[![](http://img.youtube.com/vi/44KwAyw-AXs/0.jpg)](http://www.youtube.com/watch?v=44KwAyw-AXs "")
+![](http://img.youtube.com/vi/44KwAyw-AXs/0.jpg)
 
 <b>Here is a clip of Agent Puffer after training overnight</b>
-[![](http://img.youtube.com/vi/uB0HolxmnzU/0.jpg)](http://www.youtube.com/watch?v=uB0HolxmnzU "")
+![](http://img.youtube.com/vi/uB0HolxmnzU/0.jpg)
 
 <p style="clear:both;">
 Reports:
