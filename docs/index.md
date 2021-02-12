@@ -11,11 +11,11 @@ Our goal in this project is to create a Reinforcement learning agent that can de
 
 ![](intro.PNG)
 
-**Here is a clip of Agent Puffer before training**
-
+**Here is a clip of Agent Puffer before training:**
+<iframe width="560" height="315" src="https://www.youtube.com/embed/44KwAyw-AXs" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 [![](http://img.youtube.com/vi/44KwAyw-AXs/0.jpg)](http://www.youtube.com/watch?v=44KwAyw-AXs)
 
-**Here is a clip of Agent Puffer after training overnight**
+**Here is a clip of Agent Puffer after training overnight:**
 
 [![](http://img.youtube.com/vi/uB0HolxmnzU/0.jpg)](http://www.youtube.com/watch?v=uB0HolxmnzU)
 
