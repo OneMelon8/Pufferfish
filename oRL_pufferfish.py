@@ -78,6 +78,8 @@ RL_AGENT_WINS = 0
 RL_AGENT_LOSS = 0
 CURRENT_EPISODE = 0
 TEST = None
+CURRENT_CHECKPOINT = 0
+USE_BASIC_AGENT = 0.4
 
 
 
@@ -320,23 +322,73 @@ def basic_agent(agent, agent_index, distance, pitch, yaw, nearby_blocks, line_of
         AGENT_JUST_ATTACKED[agent_index] = 0
         AGENT_COOLDOWNS[agent_index] = ATTACK_COOLDOWNS[AGENT_WEAPONS[agent_index]]
 
-def load_trained_agent():
+def self_play_agent(agent_host, policy, enemy_index, agent_index, line_of_sight):
+    global AGENT_NAMES,AGENT_HEALTH,HOTBAR_OBSERVATION,AGENT_HOTBAR,AGENT_IS_BUSY,AGENT_COOLDOWNS,ATTACK_COOLDOWNS,AGENT_GAPPLE_COOLDOWN,AGENT_JUST_ATTACKED,AGENT_GAPPLE_COUNT,AGENT_SHIELD_COOLDOWNS
+    #======================= Self Play Agent ==================
+    #Obervations
+    # Calculate observations
+    # CONTINUOUS OBSERVATION SPACE:
+    # - enemy in range: true=1, false=0
+    # - my health normalized: [0, 1]
+    # - enemy health normalized: [0, 1]
+    # - enemy weapon: axe=1, sword=0.75, gapple=0.25, shield=0 (offensive to defensive scale)
+    observations = [0, 0, 0, 0]
+    observations[0] = int(line_of_sight is not None and line_of_sight["hitType"] == "entity" and line_of_sight["inRange"] and line_of_sight["type"] == AGENT_NAMES[enemy_index])
+    observations[1] = AGENT_HEALTH[agent_index] / 20
+    observations[2] = AGENT_HEALTH[enemy_index] / 20
+    observations[3] = HOTBAR_OBSERVATION[AGENT_HOTBAR[enemy_index]]
+
+    #GET all the observations then send to
+    prev_trainer_action = policy.compute_actions([observations])
+    
+    print(prev_trainer_action[0][0])
+
+    #Apply action
+    if(line_of_sight is not None and line_of_sight["hitType"] == "entity" and line_of_sight["inRange"] and line_of_sight["type"] == AGENT_NAMES[enemy_index]):
+
+        #print('prev_trained: ', prev_trainer_action[0][0])
+        prev_trainer_action = prev_trainer_action[0][0]
+
+        # Attack
+        if not AGENT_IS_BUSY[agent_index] and AGENT_COOLDOWNS[agent_index] <= 0 and prev_trainer_action == 0:
+            agent_host.sendCommand("attack 1")
+            agent_host.sendCommand("attack 0")
+            AGENT_JUST_ATTACKED[agent_index] = 0
+            AGENT_COOLDOWNS[agent_index] = ATTACK_COOLDOWNS[AGENT_WEAPONS[agent_index]]
+        # Switch to sword
+        elif not AGENT_IS_BUSY[agent_index] and AGENT_COOLDOWNS[agent_index] <= 0 and prev_trainer_action == 1:
+            select_hotbar_slot(agent_host, agent_index, 0)
+        # Switch to axe
+        elif not AGENT_IS_BUSY[agent_index] and AGENT_COOLDOWNS[agent_index] <= 0 and prev_trainer_action == 2:
+            select_hotbar_slot(agent_host, agent_index, 1)
+        # Use gapple
+        elif not AGENT_IS_BUSY[agent_index] and AGENT_GAPPLE_COOLDOWN[agent_index] <= 0 and AGENT_GAPPLE_COUNT[agent_index] > 0 and prev_trainer_action == 3:
+            use_gapple(agent_host, agent_index)
+
+        # Use shield
+        elif not AGENT_IS_BUSY[agent_index] and AGENT_SHIELD_COOLDOWNS[agent_index] <= 0 and prev_trainer_action == 4:
+            use_shield(agent_host, agent_index, enemy_index, 1)
+        # Idle
+        else:
+            pass
+        
+def load_trained_agent(new_checkpoint):
     ## PREVIOUS TRAINER
     prev_trainer = ppo.PPOTrainer(env=DummyTrainer, config={
-            "env_config": {},
-            "framework": "torch",
-            "num_gpus": 0,
-            "num_workers": 0
-        })
+        "env_config": {},
+        "framework": "torch",
+        "num_gpus": 0,
+        "num_workers": 0,
+        "explore": False
+    })
 
     #restore an older model for the previous trainer
-    prev_checkpoint_index = 327
+    prev_checkpoint_index = new_checkpoint
     prev_trainer.restore(f"models/checkpoint_{prev_checkpoint_index}/checkpoint-{prev_checkpoint_index}")
     
-    global TEST
-    TEST = prev_trainer.workers.local_worker().get_policy()
+
+    return prev_trainer.workers.local_worker().get_policy()
     
-    #policy = prev_trainer.workers.local_worker().get_policy()
         
 
 def agent_distance():
@@ -357,7 +409,6 @@ class DummyTrainer(gym.Env):
     
 class Trainer(gym.Env):
     def __init__(self, env_config):
-        global TEST
         #graphing the returns
         self.log_frequency = 1
         
@@ -394,12 +445,18 @@ class Trainer(gym.Env):
         # Custom parameters
         self.mission_index = 0
         
+        
         ###################################
-        self.opponent_policy = TEST
+        #self-play paramaters
+        self.opponent_policy = load_trained_agent(CURRENT_CHECKPOINT)
+        self.use_self_play = 1
+       
+    
+    
 
     def step(self, action):
         #reinforcment learning agent
-        global AGENT_KILLS,RL_AGENT_LOSS,RL_AGENT_WINS, TEST
+        global AGENT_KILLS,RL_AGENT_LOSS,RL_AGENT_WINS
         rl_agents_killed = AGENT_KILLS[0]
         ai_agents_killed = AGENT_KILLS[1]
         
@@ -431,65 +488,19 @@ class Trainer(gym.Env):
             AGENT_HEALTH[agent_index] = ob.get("Life", 20.0)
 
             if agent_index != 0:
-                ########################## !!!!!Add a chance to use the basic agent !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                #basic_agent(agent_host, agent_index, agent_distance(), pitch, yaw, nearby_blocks, line_of_sight)
                 move(agent_host, agent_index, pitch, yaw, nearby_blocks)
                 
                 AGENT_KILLS[1] = ob.get("PlayersKilled")
                 if ai_agents_killed < AGENT_KILLS[1]:
                     RL_AGENT_LOSS += 1
                 
-                #======================= Self Play Agent ==================
-                #Obervations
-                # Calculate observations
-                # CONTINUOUS OBSERVATION SPACE:
-                # - enemy in range: true=1, false=0
-                # - my health normalized: [0, 1]
-                # - enemy health normalized: [0, 1]
-                # - enemy weapon: axe=1, sword=0.75, gapple=0.25, shield=0 (offensive to defensive scale)
-                observations = [0, 0, 0, 0]
-                observations[0] = int(line_of_sight is not None and line_of_sight["hitType"] == "entity" and line_of_sight["inRange"] and line_of_sight["type"] == AGENT_NAMES[enemy_index])
-                observations[1] = AGENT_HEALTH[agent_index] / 20
-                observations[2] = AGENT_HEALTH[enemy_index] / 20
-                observations[3] = HOTBAR_OBSERVATION[AGENT_HOTBAR[enemy_index]]
-                
-                
-                
-                #GET all the observations then send to
-                prev_trainer_action = self.opponent_policy.compute_actions([observations])
-                
-                #Apply action
-                if(line_of_sight is not None and line_of_sight["hitType"] == "entity" and line_of_sight["inRange"] and line_of_sight["type"] == AGENT_NAMES[enemy_index]):
-                    
-                    #print('prev_trained: ', prev_trainer_action[0][0])
-                    prev_trainer_action = prev_trainer_action[0][0]
-                    #console.log()
-                    
-                    # Attack
-                    if not AGENT_IS_BUSY[agent_index] and AGENT_COOLDOWNS[agent_index] <= 0 and prev_trainer_action == 0:
-                        agent_host.sendCommand("attack 1")
-                        agent_host.sendCommand("attack 0")
-                        AGENT_JUST_ATTACKED[agent_index] = 0
-                        AGENT_COOLDOWNS[agent_index] = ATTACK_COOLDOWNS[AGENT_WEAPONS[agent_index]]
-                    # Switch to sword
-                    elif not AGENT_IS_BUSY[agent_index] and AGENT_COOLDOWNS[agent_index] <= 0 and prev_trainer_action == 1:
-                        select_hotbar_slot(agent_host, agent_index, 0)
-                    # Switch to axe
-                    elif not AGENT_IS_BUSY[agent_index] and AGENT_COOLDOWNS[agent_index] <= 0 and prev_trainer_action == 2:
-                        select_hotbar_slot(agent_host, agent_index, 1)
-                    # Use gapple
-                    elif not AGENT_IS_BUSY[agent_index] and AGENT_GAPPLE_COOLDOWN[agent_index] <= 0 and AGENT_GAPPLE_COUNT[agent_index] > 0 and prev_trainer_action == 3:
-                        use_gapple(agent_host, agent_index)
-
-                    # Use shield
-                    elif not AGENT_IS_BUSY[agent_index] and AGENT_SHIELD_COOLDOWNS[agent_index] <= 0 and prev_trainer_action == 4:
-                        use_shield(agent_host, agent_index, enemy_index, 1)
-                    # Idle
-                    else:
-                        pass
+                if(self.use_self_play):
+                    self_play_agent(agent_host, self.opponent_policy, enemy_index, agent_index, line_of_sight)
+                else:
+                    basic_agent(agent_host, agent_index, agent_distance(), pitch, yaw, nearby_blocks, line_of_sight)
                     
             
-                #agent.compute_action(obs)
+                
                     
                 continue
             if agent_index == 0:
@@ -500,8 +511,6 @@ class Trainer(gym.Env):
                 move(agent_host, agent_index, pitch, yaw, nearby_blocks)
                 #wait till it gets in range of players
                 if(line_of_sight is not None and line_of_sight["hitType"] == "entity" and line_of_sight["inRange"] and line_of_sight["type"] == AGENT_NAMES[enemy_index]):
-                    
-                    print('current agent: ',action)
                     
                     # Attack
                     if not AGENT_IS_BUSY[agent_index] and AGENT_COOLDOWNS[agent_index] <= 0 and action == 0:
@@ -606,6 +615,21 @@ class Trainer(gym.Env):
             len(self.returns) % self.log_frequency == 0:
             self.log_returns()
 
+        #update the previous agent model every 10 steps
+        if len(self.returns) % 2 == 0:
+            global CURRENT_CHECKPOINT
+            print(CURRENT_CHECKPOINT)
+            self.opponent_policy = load_trained_agent(CURRENT_CHECKPOINT)
+        
+        #randomize whether to use self play or the basic agent with a 20% chance for basic agent
+        global USE_BASIC_AGENT
+        if random.uniform(0, 1) > USE_BASIC_AGENT:
+            print("using self-play")
+            self.use_self_play = 1
+        else:
+            self.use_self_play = 0
+            print("using basic")
+        
         return np.zeros((4,))
 
     def reset_malmo(self):
@@ -656,11 +680,12 @@ if __name__ == "__main__":
     
     ray.init()
     
-    
-    load_trained_agent()
+    #load the new checkpoint
+    load_trained_agent(390)
     
     
     #run another agent then action = agent.compute_action(obs)
+    CURRENT_CHECKPOINT= 390
     
     trainer = ppo.PPOTrainer(env=Trainer, config={
         "env_config": {},
@@ -668,15 +693,12 @@ if __name__ == "__main__":
         "num_gpus": 0,
         "num_workers": 0
     })
-    
-    checkpoint_index = 332
-    trainer.restore(f"models/checkpoint_{checkpoint_index}/checkpoint-{checkpoint_index}")
+    trainer.restore(f"models/checkpoint_{CURRENT_CHECKPOINT}/checkpoint-{CURRENT_CHECKPOINT}")
     
     
     
-    i = 0
     while True:
         trainer.train()
-        #trainer.save(f"models")            #!!!!!!!!!!!! change the save later !!!!!!!!!!!!!!!
-        i += 1
+        trainer.save(f"models")            #!!!!!!!!!!!! change the save later !!!!!!!!!!!!!!!
+        CURRENT_CHECKPOINT += 1
     
