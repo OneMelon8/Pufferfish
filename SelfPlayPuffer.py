@@ -4,11 +4,11 @@ from collections import namedtuple
 from threading import Thread
 
 import MalmoPython as Malmo
-import gym, ray
+import gym
+import numpy as np
+import ray
 from gym.spaces import Discrete, Box
 from ray.rllib.agents import ppo
-import numpy as np
-import matplotlib.pyplot as plt
 
 from Pufferfish.MissionXmlUtils import *
 from Pufferfish.PathUtils import *
@@ -19,6 +19,11 @@ ABSOLUTE_PATH_TO_MAP = "C:/One/UCI/Classes/CS175/Arena"  # one
 # ABSOLUTE_PATH_TO_MAP = "C:/Users/Tianshu Wang/Desktop/Arena" # tianshu
 
 EntityInfo = namedtuple('EntityInfo', 'x, y, z, name')
+
+MESSAGE_BASIC = "/tellraw @a [\"\",{\"text\":\"[\",\"color\":\"gray\"},{\"text\":\"Puffer\",\"color\":\"red\"},{\"text\":\"Fish\",\"color\":\"gold\"}," \
+                "{\"text\":\"]\",\"color\":\"gray\"},{\"text\":\" Using \",\"color\":\"yellow\"},{\"text\":\"basic\",\"color\":\"aqua\"},{\"text\":\" agent\",\"color\":\"yellow\"}]"
+MESSAGE_SELF_PLAY = "/tellraw @a [\"\",{\"text\":\"[\",\"color\":\"gray\"},{\"text\":\"Puffer\",\"color\":\"red\"},{\"text\":\"Fish\",\"color\":\"gold\"}," \
+                    "{\"text\":\"]\",\"color\":\"gray\"},{\"text\":\" Using \",\"color\":\"yellow\"},{\"text\":\"self-play\",\"color\":\"green\"},{\"text\":\" agent\",\"color\":\"yellow\"}]"
 
 # Agent configurations
 AGENT_NAMES = ["Puffer", "Fish"]
@@ -68,7 +73,7 @@ RL_AGENT_WINS = 0
 RL_AGENT_LOSS = 0
 CURRENT_EPISODE = 0
 CURRENT_CHECKPOINT = 0
-USE_BASIC_AGENT = 0.4
+USE_BASIC_AGENT = 0.2
 AGENT_IDENTIFIED = False
 
 
@@ -278,12 +283,10 @@ def agent_distance():
 def basic_agent(agent, agent_index, distance, pitch, yaw, nearby_blocks, line_of_sight):
     global ATTACK_COOLDOWNS, AGENT_COOLDOWNS, AGENT_IDENTIFIED
     if not AGENT_IDENTIFIED:
-        agent.sendCommand("chat I am basic agent")
+        agent.sendCommand(f"chat {MESSAGE_BASIC}")
         AGENT_IDENTIFIED = True
 
     enemy_index = 1 if agent_index == 0 else 0
-    agent.sendCommand("chat I am basic agent")
-
     move(agent, agent_index, pitch, yaw, nearby_blocks)
 
     # Weapon policy:
@@ -325,10 +328,9 @@ def basic_agent(agent, agent_index, distance, pitch, yaw, nearby_blocks, line_of
 
 
 def self_play_agent(agent, policy, enemy_index, agent_index, line_of_sight):
-    global AGENT_NAMES, AGENT_HEALTH, HOTBAR_OBSERVATION, AGENT_HOTBAR, AGENT_IS_BUSY, AGENT_COOLDOWNS, ATTACK_COOLDOWNS, AGENT_GAPPLE_COOLDOWN, AGENT_JUST_ATTACKED, AGENT_GAPPLE_COUNT, AGENT_SHIELD_COOLDOWNS, \
-        AGENT_IDENTIFIED
+    global AGENT_NAMES, AGENT_HEALTH, HOTBAR_OBSERVATION, AGENT_HOTBAR, AGENT_IS_BUSY, AGENT_COOLDOWNS, ATTACK_COOLDOWNS, AGENT_GAPPLE_COOLDOWN, AGENT_JUST_ATTACKED, AGENT_GAPPLE_COUNT, AGENT_SHIELD_COOLDOWNS, AGENT_IDENTIFIED
     if not AGENT_IDENTIFIED:
-        agent.sendCommand("chat I am self-play agent")
+        agent.sendCommand(f"chat {MESSAGE_SELF_PLAY}")
         AGENT_IDENTIFIED = True
 
     # CONTINUOUS OBSERVATION SPACE:
@@ -384,7 +386,10 @@ def load_trained_agent(new_checkpoint):
 
     # restore an older model for the previous trainer
     prev_checkpoint_index = new_checkpoint
-    prev_trainer.restore(f"models/checkpoint_{prev_checkpoint_index}/checkpoint-{prev_checkpoint_index}")
+    try:
+        prev_trainer.restore(f"models/checkpoint_{prev_checkpoint_index}/checkpoint-{prev_checkpoint_index}")
+    except FileNotFoundError:
+        return None
 
     return prev_trainer.workers.local_worker().get_policy()
 
@@ -440,13 +445,15 @@ class Trainer(gym.Env, ABC):
         self.mission_index = 0
 
         ###################################
-        # self-play paramaters
+        # self-play parameters
         self.opponent_policy = load_trained_agent(CURRENT_CHECKPOINT)
-        self.use_self_play = True
+        self.use_self_play = False
+
+        self.first_reset = True
 
     def step(self, action):
-        # reinforcment learning agent
-        global AGENT_KILLS, RL_AGENT_LOSS, RL_AGENT_WINS
+        # Reinforcement learning agent
+        global AGENT_KILLS, RL_AGENT_LOSS, RL_AGENT_WINS, AGENT_IDENTIFIED
         rl_agents_killed = AGENT_KILLS[0]
         ai_agents_killed = AGENT_KILLS[1]
 
@@ -591,13 +598,21 @@ class Trainer(gym.Env, ABC):
         self.episode_return = 0
 
         # TODO: update the previous agent model every 10 steps
-        if CURRENT_EPISODE % 2 == 0:
+        if CURRENT_EPISODE % 10 == 0 or self.first_reset:
             # Self play agent is 20 steps behind current agent
             old_checkpoint = CURRENT_CHECKPOINT - 20
-            print(f"Loading new self-play agent at checkpoint {old_checkpoint}")
+            print(f"Loading new self-play agent at checkpoint {old_checkpoint}...", end=" ")
             self.opponent_policy = load_trained_agent(old_checkpoint)
+            print("FAILED, using basic agent" if self.opponent_policy is None else "OK!")
 
         self.use_self_play = random.random() > USE_BASIC_AGENT
+        if self.opponent_policy is None:
+            self.use_self_play = False
+
+        # First reset tag
+        if self.first_reset:
+            self.first_reset = False
+
         return np.zeros((4,))
 
     def reset_malmo(self):
@@ -620,19 +635,19 @@ if __name__ == "__main__":
 
     ray.init()
 
-    # run another agent then action = agent.compute_action(obs)
-    CURRENT_CHECKPOINT = 193
+    # Set to 0 for new agent
+    CURRENT_CHECKPOINT = 0
 
     # load the new checkpoint
-    load_trained_agent(CURRENT_CHECKPOINT)
-
     trainer = ppo.PPOTrainer(env=Trainer, config={
         "env_config": {},
         "framework": "torch",
         "num_gpus": 0,
         "num_workers": 0
     })
-    trainer.restore(f"models/checkpoint_{CURRENT_CHECKPOINT}/checkpoint-{CURRENT_CHECKPOINT}")
+
+    if CURRENT_CHECKPOINT > 0:
+        trainer.restore(f"models/checkpoint_{CURRENT_CHECKPOINT}/checkpoint-{CURRENT_CHECKPOINT}")
 
     while True:
         trainer.train()
