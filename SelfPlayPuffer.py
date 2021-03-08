@@ -1,4 +1,5 @@
 # Imports
+import requests
 from abc import ABC
 from collections import namedtuple
 from threading import Thread
@@ -72,15 +73,15 @@ PREV_AGENT_HEALTH = [AGENT_HEALTH[:], AGENT_HEALTH[:]]
 AGENT_KILLS = [0, 0]
 RL_AGENT_WINS = 0
 RL_AGENT_LOSS = 0
-CURRENT_CHECKPOINT = 0
-OLD_CHECKPOINT = 0
 USE_BASIC_AGENT = 0.2
 AGENT_IDENTIFIED = False
 
+
 # Debug
-prev_action = None
+# prev_action = None
 
 
+# Mission methods
 def get_mission_xml():
     xml = f"""
     <?xml version="1.0" encoding="utf-8"?>
@@ -139,7 +140,7 @@ def get_mission_xml():
 
 
 def start_mission(agent_host, mission, client_pool, mission_record, index, mission_id):
-    # print(f"Attempting to start mission #{index} with ID = {mission_id}...")
+    # print(f"[Malmo] Attempting to start mission #{index} with ID = {mission_id}...")
     wait_time = 0
     while True:
         try:
@@ -148,27 +149,25 @@ def start_mission(agent_host, mission, client_pool, mission_record, index, missi
         except Malmo.MissionException as ex:
             error_code = ex.details.errorCode
             if error_code == Malmo.MissionErrorCode.MISSION_SERVER_WARMING_UP:
-                # print(f"Server not quite ready yet - waiting; wait time = {wait_time}")
+                # print(f"[Malmo] Server not quite ready yet - waiting; wait time = {wait_time}")
                 time.sleep(2)
                 wait_time += 2
             elif error_code == Malmo.MissionErrorCode.MISSION_INSUFFICIENT_CLIENTS_AVAILABLE:
-                # print("Not enough available Minecraft instances running.")
-                # print(f"Will wait in case they are starting up; wait time = {wait_time}")
+                # print("[Malmo] Not enough available Minecraft instances running.")
+                # print(f"[Malmo] Will wait in case they are starting up; wait time = {wait_time}")
                 time.sleep(2)
                 wait_time += 2
             elif error_code == Malmo.MissionErrorCode.MISSION_SERVER_NOT_FOUND:
-                # print("Server not found - has the mission with role 0 been started yet?")
-                # print(f"Will wait and retry; wait time = {wait_time}")
+                # print("[Malmo] Server not found - has the mission with role 0 been started yet?")
+                # print(f"[Malmo] Will wait and retry; wait time = {wait_time}")
                 time.sleep(2)
                 wait_time += 2
             else:
-                print(f"Unknown error: {ex.message}")
-                print("Waiting will not help here - bailing immediately.")
+                print(f"[Malmo] Unknown error: {ex.message}, exiting system")
                 exit(1)
 
 
 def wait_for_start(agent_hosts):
-    # print(f"Waiting for all agents to ready up...")
     start_flags = [False for _ in range(2)]
     start_time = time.time()
 
@@ -179,13 +178,35 @@ def wait_for_start(agent_hosts):
 
     # Timed out
     if time.time() - start_time >= 120:
-        print("Timed out while waiting for mission to start - bailing.")
+        print("[Malmo] Timed out while waiting for mission to start, exiting system")
         exit(1)
 
     # Ready!
-    print(f"All agents ready, mission start!")
+    print(f"[Malmo] All agents ready, mission start!")
 
 
+# HTTP methods
+def get_current_checkpoint():
+    r = requests.get("http://localhost:5000/checkpoint")
+    return r.json()
+
+
+def increment_current_checkpoint():
+    r = requests.post("http://localhost:5000/checkpoint")
+    return r.json()
+
+
+def reset_current_checkpoint():
+    r = requests.post("http://localhost:5000/reset")
+    return r.json()
+
+
+def set_current_checkpoint(checkpoint_index):
+    r = requests.post(f"http://localhost:5000/set?index={checkpoint_index}")
+    return r.json()
+
+
+# Agent methods
 def select_hotbar_slot(agent, index, slot: int):
     """
     Selects the hotbar slot for the agent
@@ -360,12 +381,12 @@ def self_play_agent(agent, policy, enemy_index, agent_index, line_of_sight):
     observations[3] = HOTBAR_OBSERVATION[AGENT_HOTBAR[enemy_index]]
 
     # GET all the observations then send to
-    global prev_action
+    # global prev_action
 
     action = policy.compute_actions([observations])[0][0]
-    if action != prev_action:
-        print(f"SELF PLAY ACTION: {ACTION_DEBUG_MAP[action]}")
-        prev_action = action
+    # if action != prev_action:
+    #     print(f"[Fish] Action: {ACTION_DEBUG_MAP[action]}")
+    #     prev_action = action
 
     # Apply action
     if line_of_sight is not None and line_of_sight["hitType"] == "entity" and line_of_sight["inRange"] and line_of_sight["type"] == AGENT_NAMES[enemy_index]:
@@ -453,10 +474,11 @@ class Trainer(gym.Env, ABC):
         self.client_pool.add(Malmo.ClientInfo("127.0.0.1", 10000))
         self.client_pool.add(Malmo.ClientInfo("127.0.0.1", 10001))
         self.mission_index = 0
+        self.old_checkpoint = -1
 
         ###################################
         # self-play parameters
-        self.opponent_policy = load_trained_agent(CURRENT_CHECKPOINT)
+        self.opponent_policy = load_trained_agent(get_current_checkpoint())
         self.use_self_play = False
         self.last_load = 0
         self.first_reset = True
@@ -601,7 +623,7 @@ class Trainer(gym.Env, ABC):
         self.step_rewards.append(reward)
 
         # Debug current reward
-        # print(f"Action: {ACTION_DEBUG_MAP[action]} / Reward: {reward}")
+        # print(f"[Puffer] Action: {ACTION_DEBUG_MAP[action]} / Reward: {reward}")
 
         # Sleep for a while, wait for next observation
         time.sleep(0.05)
@@ -609,11 +631,11 @@ class Trainer(gym.Env, ABC):
 
     def reset(self):
         global AGENT_LOCATIONS, AGENT_COOLDOWNS, AGENT_JUST_ATTACKED, AGENT_SHIELD_COOLDOWNS, AGENT_WEAPONS, AGENT_IS_BUSY, AGENT_HOTBAR, AGENT_GAPPLE_COUNT, AGENT_GAPPLE_COOLDOWN, AGENT_HEALTH, PREV_AGENT_HEALTH, \
-            AGENT_KILLS, AGENT_IDENTIFIED, CURRENT_CHECKPOINT, OLD_CHECKPOINT
+            AGENT_KILLS, AGENT_IDENTIFIED
         # Graph and reset step rewards
-        _, ax = plt.subplots(1, 1, figsize=(10, 3))
-        ax.plot(np.arange(len(self.step_rewards)), self.step_rewards, "r-")
-        plt.show()
+        # _, ax = plt.subplots(1, 1, figsize=(10, 3))
+        # ax.plot(np.arange(len(self.step_rewards)), self.step_rewards, "r-")
+        # plt.show()
 
         # Reset Malmo
         self.reset_malmo()
@@ -633,14 +655,16 @@ class Trainer(gym.Env, ABC):
         AGENT_KILLS = [0, 0]
         AGENT_IDENTIFIED = False
 
-        # TODO: update the previous agent model every 10 steps
-        if (CURRENT_CHECKPOINT % 10 == 0 and self.last_load != CURRENT_CHECKPOINT) or self.first_reset:
-            # Self play agent is 20 steps behind current agent
-            OLD_CHECKPOINT = CURRENT_CHECKPOINT - 20
-            print(f"Loading new self-play agent at checkpoint {OLD_CHECKPOINT}...", end=" ")
-            self.opponent_policy = load_trained_agent(OLD_CHECKPOINT)
-            print("FAILED, using basic agent" if self.opponent_policy is None else "OK!")
-            self.last_load = CURRENT_CHECKPOINT
+        curr_checkpoint = get_current_checkpoint()
+        
+        # Update the self-play agent model every 10 steps
+        if (curr_checkpoint % 5 == 0 and self.last_load != curr_checkpoint) or self.first_reset:
+            # Self-play agent is 10 steps behind current agent
+            self.old_checkpoint = curr_checkpoint - 10
+            print(f"[System] Loading new self-play agent at checkpoint {self.old_checkpoint}...", end=" ")
+            self.opponent_policy = load_trained_agent(self.old_checkpoint)
+            print("FAILED" if self.opponent_policy is None else "OK")
+            self.last_load = curr_checkpoint
 
         self.use_self_play = random.random() > USE_BASIC_AGENT
         if self.opponent_policy is None:
@@ -650,11 +674,10 @@ class Trainer(gym.Env, ABC):
         if self.first_reset:
             self.first_reset = False
 
-        print(f"Running mission #{self.mission_index}: #{CURRENT_CHECKPOINT} vs " + (f"#{OLD_CHECKPOINT}" if self.use_self_play else "Basic Agent"))
+        print(f"[Malmo] Running mission #{self.mission_index}: #{curr_checkpoint} vs " + (f"#{self.old_checkpoint}" if self.use_self_play else "Basic Agent"))
         return np.zeros((4,))
 
     def reset_malmo(self):
-        global CURRENT_CHECKPOINT
         self.mission_index += 1
         # Create missions
         mission = Malmo.MissionSpec(get_mission_xml(), True)
@@ -668,7 +691,12 @@ class Trainer(gym.Env, ABC):
 
 
 if __name__ == "__main__":
-    global CURRENT_CHECKPOINT
+    checkpoint = 0
+    if checkpoint == 0:
+        print(f"[System] Creating a new model, setting checkpoint index to {checkpoint}")
+    else:
+        print(f"[System] Initializing model at checkpoint {checkpoint}...")
+    set_current_checkpoint(checkpoint)
     # Flush immediately
     print = functools.partial(print, flush=True)
     # Init libraries
@@ -683,13 +711,11 @@ if __name__ == "__main__":
     })
 
     # Set to 0 to create a new agent
-    if CURRENT_CHECKPOINT > 0:
-        trainer.restore(f"models/checkpoint_{CURRENT_CHECKPOINT}/checkpoint-{CURRENT_CHECKPOINT}")
+    checkpoint = get_current_checkpoint()
+    if checkpoint > 0:
+        trainer.restore(f"models/checkpoint_{checkpoint}/checkpoint-{checkpoint}")
 
     while True:
         trainer.train()
         trainer.save(f"models")
-        print("=" * 30)
-        print(f"Saving checkpoint #{CURRENT_CHECKPOINT}")
-        print("=" * 30)
-        CURRENT_CHECKPOINT += 1
+        print(f"[System] Saving checkpoint #{increment_current_checkpoint()}")
