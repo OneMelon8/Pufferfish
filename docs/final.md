@@ -106,7 +106,7 @@ Although the heat mapping provides some ideas and data of the qualitative analys
 <b>The bottom screen is the self-play trained agent and the top screen is the basic agent</b>
 <iframe width="560" height="315" src="https://www.youtube.com/embed/CMIf6wUIE0U" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
-In the video you can see that the self-play agent will only use the golden apple when it has taken significant damage and tries to block incoming attacks using the sheild. Sometimes the self-play agent will hold out the sword and wait for the basic agent to put down the sheild, but it also decides to break the sheild with an axe and defeat the basic agent with the axe while the basic agent is trying to heal with a golden apple. Before the self-play, the agent would use the golden apple immediately when it sees the agent, and it would not try to block the attacks with a sheild. 
+In the video you can see that the self-play agent will only use the golden apple when it has taken significant damage and tries to block incoming attacks using the sheild. After eatting the golden apple the self-play agent also punches the rule-based agent backwards while it heals. Sometimes the self-play agent will hold out the sword and wait for the basic agent to put down the sheild, but it also decides to break the sheild with an axe and defeat the basic agent with the axe while the basic agent is trying to heal with a golden apple. Before the self-play, the agent would use the golden apple immediately when it sees the agent, would not knock back the opponent agent as a strategy and it would not try to block the attacks with a sheild. 
 
 
 ## Resources Used
