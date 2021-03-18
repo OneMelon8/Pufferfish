@@ -3,6 +3,9 @@ layout: default
 title:  Final Report
 ---
 
+## Demonstration Video
+<iframe width="560" height="315" src="https://www.youtube.com/embed/NbO2JNhUz7Q" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
 ## Project Summary
 Fighting is a very important part of Minecraft gameplay. In survival mode, the player usually needs to eliminate different kinds of mobs to save himself and defend the shelter. In multiplayer mode, the agent will also face the threat of other players. A hardcoded computer agent may easily defeat mobs, but when it faces flexible and intelligent human players, the builtin logic will not be sufficient to handle the variety, thus we applied machine learning algorithms to our smart agent in order to simulate human player reaction as much as possible.
 
