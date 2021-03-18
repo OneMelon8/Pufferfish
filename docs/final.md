@@ -7,7 +7,7 @@ title:  Final Report
 <iframe width="560" height="315" src="https://www.youtube.com/embed/NbO2JNhUz7Q" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ## Project Summary
-Fighting is a very important part of Minecraft gameplay. In survival mode, the player usually needs to eliminate different kinds of mobs to save himself and defend the shelter. In multiplayer mode, the agent will also face the threat of other players. A hardcoded computer agent may easily defeat mobs, but when it faces flexible and intelligent human players, the builtin logic will not be sufficient to handle the variety, thus we applied machine learning algorithms to our smart agent in order to simulate human player reaction as much as possible.
+Fighting is a very important part of Minecraft gameplay. In survival mode, the player usually needs to eliminate different kinds of mobs to save themselves and defend the shelter. In multiplayer mode, the agent will also face the threat of other players. A hardcoded computer agent may easily defeat mobs, but when it faces flexible and intelligent human players, the builtin logic will not be sufficient to handle the variety, thus we applied machine learning algorithms to our smart agent in order to simulate human player reaction as much as possible.
 
 This project was based on Malmo python and reinforcement learning in order to create a smart agent for fighting. We applied the modules from RLlib and started the training by fighting with a hardcoded agent which can attack, defend with shield and use gold apples to recover its health. After our smart agent was able to defeat the hardcoded agent for most of the time, we made it fight with models of itself at previous checkpoints and occasionally the basic agent(so that it doesn't forget it's original baseline) to keep improving its ability. During the self-play procedure, we also tried multiple approaches to fix bugs and compare the effectiveness of our changes.
 
@@ -75,6 +75,10 @@ Since self-play is built upon having an initial baseline RL agent our proposed a
 
 The rules for the baseline approach is very open-ended since we based the rule of the rule-based agent off of what we believed to be a good set of rules for pvp. As a result this can create overfitting to the rule-based agent which means our RL agent will only be able to defeat the rule-based agent. By using self-play the rule-based agent will still be used as a baseline, but the learned policy limitations are no longer bounded by just the rules of the rule-based agent and we should see an increase in different pvp policies that the RL agent will learn.
 
+A disadvantage to self-play is that because the agent experiences new observation that deviates from the rule-based agent it was trained on, it may learn very bad behaviors. For instance there were cases in which the self-play agent learned to only punch the opponent which although wins because it abuses the hard coded pathing that we implemented to each agent, it would not work against a human player.
+
+### Other interesting approaches
+Along with the self-play we tried training different models with additional observation space for distance, or adding a negative reward for eatting a golden apple too early, or using too many random actions, but these models ended up learning very weird policies like only defending and punching the opponent away with a sheild, or just not using any actions. Ultimately we used our original observation and reward space along with self-play which ended up performing very well.  
             
  
 ## Evaluation
@@ -83,25 +87,26 @@ First we will create a hard-coded agent with fixed actions, the AI shall play ag
 
 ![](wins_over_time.png)
 
-From the image above even at checkpoint 20, we already had a good baseline of defeating the rule-based agent and through the process of self-play the RL agent begins to consistently score above 20 wins easily.<br>
+From the image above even at checkpoint 20, we already had a good baseline of defeating the rule-based agent and through the process of self-play the RL agent begins to consistently score above 20 wins easily. The results were surprising since we do end up seeing that the self-play agent is able to beat the rule-based agent over 75% of the time.<br>
 
-<b>This is a chart of the wins to losses of 50 episodes from each of the different combinations of agents battling.</b>
+<b>This is a chart of the wins to losses over 50 episodes from each of the different combinations of agents battling.</b>
 ![](winsloss.png)
 
-The highest win rate occuring in the battle between our final agent and the basic agent. Overall our final agent trained on self-play defeats both the basic agent as well as the agent that only trained against the basic agent a majority of the time.
+The highest win rate occurs in the battle between our final agent and the basic agent. Overall, our final agent trained on self-play defeats both the basic agent as well as the RL agent that only trained against the basic agent a majority of the time.
 
 <b>This is a heatmap of the different actions and responses that our final agent had in response to the basic agent.</b>
 ![](action_map.png)
 
 The qualitative evaluation will be the agent’s response to different incoming actions: such as shielding or avoiding when being attacked. It is hard to judge the quality of combat, but we will try to make the AI react differently to attacks so the fight can be more exciting.
 
-The above image shows some of the different policies or responses that our RL agent has learned after training. There are a few noticable actions points such as eatting a apple when the oppponent has their sheild up and switching to either a sword or an axe whenever the opponent decides to use their golden apple, which leaves them vulnerable to attacks. Another common policy that it learned was to switch to a sword when the basic agent has an axe which could be because the sword is faster at attacking. Another pattern that can be seen is that the agent prefers to use the sword to attack rather than the axe, while occasionally using the axe and sheild.
+The above image shows some of the different policies or responses that our RL agent has learned after training. There are a few noticeable actions in the plot such as eatting a apple when the oppponent has their sheild up, which is a good idea since they are on the defense. Another action is switching to either a sword or an axe whenever the opponent decides to use their golden apple, this can be because using a golden apple leaves them vulnerable to attacks. Another common policy that it learned was to switch to a sword when the basic agent has an axe which could be because the sword is faster at attacking. Another pattern that can be seen is that the agent prefers to use the sword to attack rather than the axe, while occasionally using the axe and sheild.
 
 Although the heat mapping provides some ideas and data of the qualitative analysis, watching the agent fight in the video  provides a better demonstration of what the self-play agent has learned. 
+
 <b>The bottom screen is the self-play trained agent and the top screen is the basic agent</b>
 <iframe width="560" height="315" src="https://www.youtube.com/embed/CMIf6wUIE0U" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
-In the video you can see that the self-play agent will only use the golden apple when it has taken significant damage and tries to block incoming attacks using the sheild. Sometimes the self-play agent will hold out the sword and wait for the basic agent to put down the sheild, but it also decides to break the sheild with an axe and defeat the basic agent with the axe while the basic agent is trying to heal with a golden apple.
+In the video you can see that the self-play agent will only use the golden apple when it has taken significant damage and tries to block incoming attacks using the sheild. Sometimes the self-play agent will hold out the sword and wait for the basic agent to put down the sheild, but it also decides to break the sheild with an axe and defeat the basic agent with the axe while the basic agent is trying to heal with a golden apple. Before the self-play, the agent would use the golden apple immediately when it sees the agent, and it would not try to block the attacks with a sheild. 
 
 
 ## Resources Used
@@ -111,3 +116,8 @@ multi-agent RLLIB source code: <https://github.com/ray-project/ray/blob/master/r
 Project Malmo: <https://microsoft.github.io/malmo/0.30.0/Schemas/Mission.html> <br>
 Self-play: <https://openai.com/blog/competitive-self-play/> <br>
 
+
+
+```python
+
+```
