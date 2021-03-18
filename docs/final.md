@@ -91,7 +91,7 @@ From the image above even at checkpoint 20, we already had a good baseline of de
 The highest win rate occuring in the battle between our final agent and the basic agent. Overall our final agent trained on self-play defeats both the basic agent as well as the agent that only trained against the basic agent a majority of the time.
 
 <b>This is a heatmap of the different actions and responses that our final agent had in response to the basic agent.</b>
-![](actionmap.png)
+![](action_map.png)
 
 The qualitative evaluation will be the agent’s response to different incoming actions: such as shielding or avoiding when being attacked. It is hard to judge the quality of combat, but we will try to make the AI react differently to attacks so the fight can be more exciting.
 
