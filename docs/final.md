@@ -125,7 +125,7 @@ From the image above even at checkpoint 20, we already had a good performance of
 The highest win rate occurs in the battle between our final agent and the basic agent. Overall, our final self-play agent defeats both the basic agent as well as the RL agent that only trained against the basic agent a majority of the time.
 
 ### Qualitative analysis
-<b>This is a heatmap of the different actions and responses that our final agent had in response to the basic agent.</b>
+<b>This is a heatmap of the different actions and responses that our final agent had in response to the basic agent.</b><br>
 ![](action_map.png)
 
 The qualitative evaluation will be the agent’s response to different incoming actions: such as shielding or avoiding when being attacked. It is hard to judge the quality of combat, but we will try to make the AI react differently to attacks so the fight can be more exciting.
@@ -148,9 +148,3 @@ multi-agent RLLIB: <https://docs.ray.io/en/master/rllib-env.html#multi-agent-and
 multi-agent RLLIB source code: <https://github.com/ray-project/ray/blob/master/rllib/env/multi_agent_env.py><br>
 Project Malmo: <https://microsoft.github.io/malmo/0.30.0/Schemas/Mission.html> <br>
 Self-play: <https://openai.com/blog/competitive-self-play/> <br>
-
-
-
-```python
-
-```
